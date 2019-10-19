@@ -1,5 +1,7 @@
 #include "state.h"
 
+using symbol = state::symbol;
+
 #include <iterator>
 #include <sstream>
 
@@ -7,7 +9,7 @@ const char *state::symbol_name[] = {
     "BOND", "CAR", "CHE", "BDU", "ALI", "TCT", "BAT", "INVALID"
 };
 
-static inline std::vector<std::string> split(const std::string &s)
+inline std::vector<std::string> split(const std::string &s)
 {
     std::stringstream ss(s);
     std::istream_iterator<std::string> begin(ss);
@@ -15,7 +17,78 @@ static inline std::vector<std::string> split(const std::string &s)
     return std::vector<std::string>(begin, end);
 }
 
-void state::parse(std::string &s)
+
+inline symbol state::parse_symbol(const_cstr &s) {
+    switch (s[0]) {
+    case 'B':
+        switch (s[1]) {
+            case 'O': s += 4; return BOND;
+            case 'D': s += 3; return BDU;
+            case 'A': s += 3; return BAT;
+            default: return INVALID;
+        }
+    case 'C':
+        switch (s[1]) {
+            case 'A': s += 3; return CAR;
+            case 'H': s += 3; return CHE;
+            default: return INVALID;
+        }
+    case 'A':
+        s += 3; return ALI;
+    case 'T':
+        s += 3; return TCT;
+    default: return INVALID;
+    }
+}
+
+static inline int parse_int(state::const_cstr &s) {
+    int ret = 0;
+    while (*s >= '0' && *s <= '9') ret = ret * 10 + *(s++) - '0';
+    return ret;
+}
+
+static inline std::pair<int, int> parse_pair(state::const_cstr s) {
+    int price = parse_int(s);
+    s++;    // Skip ':'
+    int qty = parse_int(s);
+    return {price, qty};
+}
+
+
+
+int state::add_order(symbol sym, bool is_buy, int price, int qty)
+{
+    char s[1024];
+    int id = _id++;
+    sprintf(s, "ADD %d %s %s %d %d", id, symbol_name[sym],
+        is_buy ? "BUY" : "SELL", price, qty);
+    send_callback(s);
+    _orders.push_back(order {id, sym, is_buy, price, qty});
+    return id;
+}
+
+void state::cancel_order(int id)
+{
+    char s[16];
+    sprintf(s, "CANCEL %d", id);
+    send_callback(s);
+}
+
+
+void state::updFairPrice()
+{
+    fair[BOND] = 1000;
+    std::vector<symbol> stock = {CAR, BDU, ALI, TCT};
+    for (auto s: stock)
+        if (!_book[s][0].empty() && !_book[s][0].empty())
+            fair[s] = 0.5 * (_book[s][0][0].first + _book[s][1][0].first);
+    fair[CHE] = fair[CAR];
+    fair[BAT] = 0.3*fair[BOND] + 0.2*fair[BDU] + 0.3*fair[ALI] + 0.2*fair[TCT];
+}
+
+
+
+void state::handle(std::string &s)
 {
     auto v = split(s);
 
@@ -39,6 +112,21 @@ void state::parse(std::string &s)
     } else if (v[0] == "BOOK") {
         const char *cs = s.c_str() + 5;
         enum symbol sym = parse_symbol(cs);
+        if (sym != BOND) return;
+        printf("BOOK received (%s)\n", symbol_name[sym]);
+        puts(cs);
+        int i = 3;  // BOOK <SYM> BUY
+        std::vector<std::pair<int, int>> book_entry[2];
+        for (; v[i][0] != 'S'; i++) {
+            book_entry[1].push_back(parse_pair(v[i].c_str()));
+        }
+        i++;    // Skip 'SELL'
+        for (; i < v.size(); i++) {
+            book_entry[0].push_back(parse_pair(v[i].c_str()));
+        }
+        _book[(int)sym][0] = book_entry[0];
+        _book[(int)sym][1] = book_entry[1];
+
         if (sym == BOND) {
             printf("BOOK received (%s)\n", symbol_name[sym]);
             puts(cs);
