@@ -67,6 +67,19 @@ public:
         return id;
     }
 
+    double fair[233];
+
+    void updFairPrice()
+    {
+        fair[BOND] = 1000;
+        std::vector<symbol> stock = {CAR, BDU, ALI, TCT};
+        for (auto s: stock)
+            if (!_book[s][0].empty() && !_book[s][0].empty())
+                fair[s] = 0.5 * (_book[s][0][0].first + _book[s][1][0].first);
+        fair[CHE] = fair[CAR];
+        fair[BAT] = 0.3*fair[BOND] + 0.2*fair[BDU] + 0.3*fair[ALI] + 0.2*fair[TCT];
+    }
+
 protected:
     bool _initialized;
     bool _open;
