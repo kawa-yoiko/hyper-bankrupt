@@ -29,8 +29,8 @@ std::pair<int*, int*> trade_strategy::trade_price(){
 			buy_profit+=_buy_distribution[i];
 			sell_profit+=_sell_distribution[i];
 		}
-		for (int i=0;i<15;i++)to_sell[i]=max_to_buy*_buy_distribution[i]/buy_profit;
-		for (int i=0;i<15;i++)to_buy[i]=max_to_sell*_sell_distribution[i]/sell_profit;
+		for (int i=0;i<15;i++)to_buy[i]=max_to_buy*_buy_distribution[i]/buy_profit;
+		for (int i=0;i<15;i++)to_sell[i]=max_to_sell*_sell_distribution[i]/sell_profit;
 	}
 	return std::make_pair(to_sell,to_buy);
 }
