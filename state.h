@@ -1,164 +1,232 @@
-#ifndef _STATE_H_
-#define _STATE_H_
-
-#include <functional>
-#include <map>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
+#include "state.h"
 #include <cmath>
 
-class state {
-public:
-    state() : _initialized(false), _open(false), _id(0) {
-        limit[BOND] = 100;
-        limit[CAR] = 10;
-        limit[CHE] = 10;
-        limit[BDU] = 100;
-        limit[ALI] = 100;
-        limit[TCT] = 100;
-        limit[BAT] = 100;
-    }
+using symbol = state::symbol;
 
-    void parse(std::string &s);
+#include <iterator>
+#include <sstream>
 
-    enum symbol {
-        BOND = 0, CAR, CHE, BDU, ALI, TCT, BAT, INVALID, COUNT
-    };
-    static const char *symbol_name[COUNT];
-    int limit[COUNT];
-
-    typedef const char *const_cstr;
-    static inline enum symbol parse_symbol(const_cstr &s) {
-        switch (s[0]) {
-        case 'B':
-            switch (s[1]) {
-                case 'O': s += 4; return BOND;
-                case 'D': s += 3; return BDU;
-                case 'A': s += 3; return BAT;
-                default: return INVALID;
-            }
-        case 'C':
-            switch (s[1]) {
-                case 'A': s += 3; return CAR;
-                case 'H': s += 3; return CHE;
-                default: return INVALID;
-            }
-        case 'A':
-            s += 3; return ALI;
-        case 'T':
-            s += 3; return TCT;
-        default: return INVALID;
-        }
-    }
-
-    static inline int parse_int(const_cstr &s) {
-        int ret = 0;
-        while (*s >= '0' && *s <= '9') ret = ret * 10 + *(s++) - '0';
-        return ret;
-    }
-
-    static inline std::pair<int, int> parse_pair(const_cstr s) {
-        int price = parse_int(s);
-        s++;    // Skip ':'
-        int qty = parse_int(s);
-        return {price, qty};
-    }
-
-    std::function<void (const char *)> send_callback;
-
-    int add_order(symbol sym, bool is_buy, int price, int qty)
-    {
-        char s[1024];
-        int id = _id++;
-        sprintf(s, "ADD %d %s %s %d %d", id, symbol_name[sym],
-            is_buy ? "BUY" : "SELL", price, qty);
-        send_callback(s);
-        _orders.push_back(order {id, sym, is_buy, price, qty});
-        _orders_for[sym][is_buy][price].insert(id);
-        return id;
-    }
-
-    inline void cancel_order(int id)
-    {
-        char s[16];
-        sprintf(s, "CANCEL %d", id);
-        send_callback(s);
-        remove_order(id);
-    }
-
-    inline void remove_order(int id)
-    {
-        const auto &o = _orders[id];
-        int sym = (int)o.sym;
-        _orders_for[sym][o.is_buy][o.price].erase(id);
-    }
-
-    double fair[233];
-
-    void updFairPrice()
-    {
-        fair[BOND] = 1000;
-        std::vector<symbol> stock = {CAR, BDU, ALI, TCT};
-        for (auto s: stock)
-            if (!_book[s][0].empty() && !_book[s][0].empty())
-                fair[s] = 0.5 * (_book[s][0][0].first + _book[s][1][0].first);
-        fair[CHE] = fair[CAR];
-        fair[BAT] = 0.3*fair[BOND] + 0.2*fair[BDU] + 0.3*fair[ALI] + 0.2*fair[TCT];
-    }
-
-    void wdnmd(symbol sym)
-    {
-        const int BUY = 1, SELL = 0;
-        static int prevbuy[COUNT];
-        static int prevsell[COUNT];
-        static int prevfair[COUNT];
-        std::fill(prevbuy, prevbuy+COUNT, -1);
-        std::fill(prevbuy, prevbuy+COUNT, -1);
-        std::fill(prevbuy, prevbuy+COUNT, -1);
-
-        if (int(round(fair[sym])) != prevfair[sym])
-        {
-            if (prevbuy[sym] != -1) cancel_order(prevbuy[sym]);
-            if (prevsell[sym] != -1) cancel_order(prevsell[sym]);
-            prevfair[sym] = int(round(fair[sym]));
-            prevbuy[sym] = add_order(sym, BUY, prevfair[sym]-2, limit[sym]-_pos[sym]);
-            prevsell[sym] = add_order(sym, SELL, prevfair[sym]+2, limit[sym]+_pos[sym]);
-        }
-    }
-
-protected:
-    bool _initialized;
-    bool _open;
-
-    int _id;
-
-    struct order {
-        int id;
-        symbol sym;
-        bool is_buy;
-        int price;
-        int qty;
-    };
-    std::vector<order> _orders;
-
-    // _orders_for[symbol][sell/buy][price]
-    std::map<int, std::set<int>> _orders_for[COUNT][2];
-
-    int _pos[COUNT];
-    // [0] = sell, [1] = buy
-    std::vector<std::pair<int, int>> _book[COUNT][2];
-
-    int _filled_since_last_recal;
-    // [sym]
-    // [0] = sell, [1] = buy
-    std::map<int, int> _fills[COUNT][2];
-    // first = sell, second = buy
-    std::pair<int *, int *> cal_dist(symbol sym);
-
-    void adjust_orders(std::pair<int *, int *> desired);
-    void adjust_orders(symbol sym, std::map<int, int> to_sell, std::map<int, int> to_buy);
+const char *state::symbol_name[] = {
+    "BOND", "CAR", "CHE", "BDU", "ALI", "TCT", "BAT", "INVALID"
 };
 
-#endif
+inline std::vector<std::string> split(const std::string &s)
+{
+    std::stringstream ss(s);
+    std::istream_iterator<std::string> begin(ss);
+    std::istream_iterator<std::string> end;
+    return std::vector<std::string>(begin, end);
+}
+
+
+inline symbol state::parse_symbol(const_cstr &s) {
+    switch (s[0]) {
+    case 'B':
+        switch (s[1]) {
+            case 'O': s += 4; return BOND;
+            case 'D': s += 3; return BDU;
+            case 'A': s += 3; return BAT;
+            default: return INVALID;
+        }
+    case 'C':
+        switch (s[1]) {
+            case 'A': s += 3; return CAR;
+            case 'H': s += 3; return CHE;
+            default: return INVALID;
+        }
+    case 'A':
+        s += 3; return ALI;
+    case 'T':
+        s += 3; return TCT;
+    default: return INVALID;
+    }
+}
+
+static inline int parse_int(state::const_cstr &s) {
+    int ret = 0;
+    while (*s >= '0' && *s <= '9') ret = ret * 10 + *(s++) - '0';
+    return ret;
+}
+
+static inline std::pair<int, int> parse_pair(state::const_cstr s) {
+    int price = parse_int(s);
+    s++;    // Skip ':'
+    int qty = parse_int(s);
+    return {price, qty};
+}
+
+
+
+
+int state::add_order(symbol sym, bool is_buy, int price, int qty)
+{
+    char s[1024];
+    int id = _id++;
+    sprintf(s, "ADD %d %s %s %d %d", id, symbol_name[sym],
+        is_buy ? "BUY" : "SELL", price, qty);
+    send_callback(s);
+    _orders.push_back(order {id, sym, false, is_buy, price, qty});
+    return id;
+}
+
+int state::add_convert(symbol sym, bool is_buy, int qty)
+{
+    char s[1024];
+    int id = _id++;
+    sprintf(s, "CONVERT %d %s %s %d", id, symbol_name[sym],
+        is_buy ? "BUY" : "SELL", qty);
+    send_callback(s);
+    _orders.push_back(order {id, sym, true, is_buy, 0, qty});
+    return id;
+}
+
+void state::cancel_order(int id)
+{
+    char s[16];
+    sprintf(s, "CANCEL %d", id);
+    send_callback(s);
+}
+
+
+void state::updFairPrice()
+{
+    std::fill(fair, fair+COUNT, -1);
+    fair[BOND] = 1000;
+    std::vector<symbol> stock = {CAR, BDU, ALI, TCT};
+    for (auto s: stock)
+        if (!_book[s][0].empty() && !_book[s][0].empty())
+            fair[s] = 0.5 * (_book[s][0][0].first + _book[s][1][0].first);
+    fair[CHE] = fair[CAR];
+    fair[BAT] = 0.3*fair[BOND] + 0.2*fair[BDU] + 0.3*fair[ALI] + 0.2*fair[TCT];
+    if (fair[BDU]==-1) fair[BAT] = -1;
+    if (fair[ALI]==-1) fair[ALI] = -1;
+    if (fair[TCT]==-1) fair[TCT] = -1;
+}
+
+
+void state::updTradeNaive(symbol sym)
+{
+    const int BUY = 1, SELL = 0;
+    static int prevbuy[COUNT] = {-1,-1,-1,-1,-1,-1,-1,-1};
+    static int prevsell[COUNT] = {-1,-1,-1,-1,-1,-1,-1,-1};
+    static int prevfair[COUNT] = {-1,-1,-1,-1,-1,-1,-1,-1};
+
+    if (int(round(fair[sym])) != prevfair[sym] && int(round(fair[sym])) != -1)
+    {
+        if (prevbuy[sym] != -1) cancel_order(prevbuy[sym]);
+        if (prevsell[sym] != -1) cancel_order(prevsell[sym]);
+        prevfair[sym] = int(round(fair[sym]));
+        prevbuy[sym] = add_order(sym, BUY, prevfair[sym]-2, 5);
+        prevsell[sym] = add_order(sym, SELL, prevfair[sym]+2, 5);
+    }
+}
+
+
+
+
+void state::handle(std::string &s)
+{
+    auto v = split(s);
+
+    if (v[0] == "HELLO") {
+        puts("HELLO received");
+        _initialized = true;
+        for (int i = 1; i < v.size(); i++) {
+            const char *p = v[i].c_str();
+            symbol sym = parse_symbol(p);
+            p++;    // Skip ':'
+            sscanf(p, "%d", &_pos[(int)sym]);
+        }
+    } else if (v[0] == "OPEN") {
+        puts("OPEN received");
+        _open = true;
+        //add_order(BOND, true, 999, std::min(100, 100 - _pos[BOND]));
+        //add_order(BOND, false, 1001, std::min(100, 100 + _pos[BOND]));
+    } else if (v[0] == "CLOSE") {
+        puts("CLOSE received");
+        _open = false;
+    } else if (v[0] == "ERROR") {
+        puts("!!!!!!");
+        puts(s.c_str());
+        puts("!!!!!!");
+    } else if (v[0] == "BOOK") {
+        const char *cs = s.c_str() + 5;
+        enum symbol sym = parse_symbol(cs);
+        //if (sym != BOND && sym != BAT && sym != CHE) return;
+        //printf("BOOK received (%s)\n", symbol_name[sym]);
+        //puts(cs);
+        int i = 3;  // BOOK <SYM> BUY
+        std::vector<std::pair<int, int>> book_entry[2];
+        for (; v[i][0] != 'S'; i++) {
+            book_entry[1].push_back(parse_pair(v[i].c_str()));
+        }
+        i++;    // Skip 'SELL'
+        for (; i < v.size(); i++) {
+            book_entry[0].push_back(parse_pair(v[i].c_str()));
+        }
+        _book[(int)sym][0] = book_entry[0];
+        _book[(int)sym][1] = book_entry[1];
+
+        updFairPrice();
+        updTradeNaive(CHE);
+        updTradeNaive(BAT);
+
+        //printf("BOOK received (%s)\n", symbol_name[sym]);
+        //puts(cs);
+
+    } else if (v[0] == "TRADE") {
+        //printf("TRADE\n");
+    } else if (v[0] == "ACK") {
+        int id = std::stoi(v[1]);
+        const auto &o = _orders[id];
+        if (_orders[id].is_convert) {
+            int mul = (o.is_buy ? +1 : -1);
+            _pos[o.sym] += o.qty * mul;
+            if (o.sym == BAT) {
+                _pos[BOND] -= o.qty / 10 * 3 * mul;
+                _pos[BDU] -= o.qty / 10 * 2 * mul;
+                _pos[ALI] -= o.qty / 10 * 3 * mul;
+                _pos[TCT] -= o.qty / 10 * 2 * mul;
+                if (o.is_buy) {
+                    add_order(BOND, true, 999, o.qty / 10 * 3);
+                    add_order(BDU, true, fair[BDU], o.qty / 10 * 2);
+                    add_order(ALI, true, fair[ALI], o.qty / 10 * 3);
+                    add_order(TCT, true, fair[TCT], o.qty / 10 * 2);
+                } else {
+                    add_order(BOND, false, 1001, o.qty / 10 * 3);
+                    add_order(BDU, false, fair[BDU], o.qty / 10 * 2);
+                    add_order(ALI, false, fair[ALI], o.qty / 10 * 3);
+                    add_order(TCT, false, fair[TCT], o.qty / 10 * 2);
+                }
+            } else {
+                // TODO
+            }
+        }
+    } else if (v[0] == "REJECT") {
+        puts("------");
+        printf("REJECT %s %s\n", v[1].c_str(), v[2].c_str());
+        puts("------");
+    } else if (v[0] == "FILL") {
+        int id = std::stoi(v[1]);
+        int price = std::stoi(v[4]);
+        int qty = std::stoi(v[5]);
+        printf("FILL price = %d qty = %d\n", price, qty);
+        const char *cs = v[2].c_str();
+        const auto &o = _orders[id];
+        //if (o.sym == BOND) add_order(BOND, o.is_buy, o.price, qty);
+
+        _pos[(int)o.sym] += (o.is_buy ? +qty : -qty);
+        static int since_last_convert = 0;
+        since_last_convert++;
+        if (since_last_convert >= 20 && o.sym == BAT && std::abs(_pos[BAT]) >= 80) {
+            since_last_convert = 0;
+            if (_pos[BAT] > 0) {
+                add_convert(BAT, false, _pos[BAT] / 10 * 10);
+            } else {
+                add_convert(BAT, true, -_pos[BAT] / 10 * 10);
+            }
+        }
+    } else if (v[0] == "OUT") {
+        printf("OUT %s\n", v[1].c_str());
+    }
+}

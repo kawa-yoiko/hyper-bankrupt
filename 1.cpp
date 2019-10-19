@@ -173,7 +173,7 @@ void run()
         std::string line = conn.read_from_exchange();
         //printf("<< %s\n", line.c_str());
         if (line.empty()) break;
-        st.parse(line);
+        st.handle(line);
     }
 }
 
@@ -189,7 +189,7 @@ void run_local()
         std::getline(std::cin, s);
         //printf("<< %s\n", s.c_str());
         if (s.empty()) break;
-        st.parse(s);
+        st.handle(s);
     }
 }
 
