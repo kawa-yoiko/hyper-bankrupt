@@ -8,9 +8,6 @@ __Final result: 6th (main) / 6th (last hour)__
 Handout: http://asia.etc.janestreet.com/handout/  
 beijing-2019, pekingduck
 
-SSH: ubuntu@13.236.161.13  
-freed-filly-lyric
-
 #### FAQ
 
 Order IDs cannot be reused, even if they are already OUT
