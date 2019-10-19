@@ -91,7 +91,7 @@ void state::parse(std::string &s)
             remove_order(id);
         }
 
-        if ((_filled_since_last_recal += qty) >= 10) {
+        if ((_filled_since_last_recal += qty) >= 50) {
             _filled_since_last_recal = 0;
             auto dist = cal_dist(BOND);
 
@@ -143,20 +143,37 @@ void state::adjust_orders(std::pair<int *, int *> desired)
     // Sell
     for (int i = 0; i < 15; i++) {
         auto &s = _orders_for[BOND][0][fair_price + i];
+        if (desired.first[i] < s.size()) {
+            // Less orders
+            int count = -(desired.first[i] - s.size());
+            for (int j = 0; j < count; j++) {
+                auto it = s.end(); --it;
+                cancel_order(*it);
+            }
+        }
+    }
+
+    // Buy
+    for (int i = 0; i < 15; i++) {
+        auto &s = _orders_for[BOND][1][fair_price - i];
+        if (desired.second[i] < s.size()) {
+            // Less orders
+            int count = -(desired.second[i] - s.size());
+            for (int j = 0; j < count; j++) {
+                auto it = s.end(); --it;
+                cancel_order(*it);
+            }
+        }
+    }
+
+    // Sell
+    for (int i = 0; i < 15; i++) {
+        auto &s = _orders_for[BOND][0][fair_price + i];
         if (desired.first[i] > s.size()) {
             // More orders
             int count = desired.first[i] - s.size();
             for (int j = 0; j < count; j++)
                 add_order(BOND, false, fair_price + i, 1);
-        } else if (desired.first[i] < s.size()) {
-            // Less orders
-            int count = -(desired.first[i] - s.size());
-            //printf("Cancel %d order(s) (%d/%d)\n", count, desired.first[i], (int)s.size());
-            for (int j = 0; j < count; j++) {
-                auto it = s.end(); --it;
-                //printf("Cancelling #%d for price %d\n", *it, fair_price + i);
-                cancel_order(*it);
-            }
         }
     }
 
@@ -168,13 +185,6 @@ void state::adjust_orders(std::pair<int *, int *> desired)
             int count = desired.second[i] - s.size();
             for (int j = 0; j < count; j++)
                 add_order(BOND, true, fair_price - i, 1);
-        } else if (desired.second[i] < s.size()) {
-            // Less orders
-            int count = -(desired.second[i] - s.size());
-            for (int j = 0; j < count; j++) {
-                auto it = s.end(); --it;
-                cancel_order(*it);
-            }
         }
     }
 }
