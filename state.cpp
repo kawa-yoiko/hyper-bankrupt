@@ -120,11 +120,17 @@ void state::handle(std::string &s)
     if (v[0] == "HELLO") {
         puts("HELLO received");
         _initialized = true;
+        for (int i = 1; i < v.size(); i++) {
+            const char *p = v[i].c_str();
+            symbol sym = parse_symbol(p);
+            p++;    // Skip ':'
+            sscanf(p, "%d", &_pos[(int)sym]);
+        }
     } else if (v[0] == "OPEN") {
         puts("OPEN received");
         _open = true;
-        add_order(BOND, true, 999, 70);
-        add_order(BOND, false, 1001, 70);
+        add_order(BOND, true, 999, std::min(100, 100 - _pos[BOND]));
+        add_order(BOND, false, 1001, std::min(100, 100 + _pos[BOND]));
     } else if (v[0] == "CLOSE") {
         puts("CLOSE received");
         _open = false;
