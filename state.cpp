@@ -189,14 +189,14 @@ void state::handle(std::string &s)
                 _pos[TCT] -= o.qty / 10 * 2 * mul;
                 if (o.is_buy) {
                     add_order(BOND, true, 999, o.qty / 10 * 3);
-                    add_order(BDU, true, fair[BDU] - 1, o.qty / 10 * 2);
-                    add_order(ALI, true, fair[ALI] - 1, o.qty / 10 * 3);
-                    add_order(TCT, true, fair[TCT] - 1, o.qty / 10 * 2);
+                    add_order(BDU, true, fair[BDU], o.qty / 10 * 2);
+                    add_order(ALI, true, fair[ALI], o.qty / 10 * 3);
+                    add_order(TCT, true, fair[TCT], o.qty / 10 * 2);
                 } else {
                     add_order(BOND, false, 1001, o.qty / 10 * 3);
-                    add_order(BDU, false, fair[BDU] + 1, o.qty / 10 * 2);
-                    add_order(ALI, false, fair[ALI] + 1, o.qty / 10 * 3);
-                    add_order(TCT, false, fair[TCT] + 1, o.qty / 10 * 2);
+                    add_order(BDU, false, fair[BDU], o.qty / 10 * 2);
+                    add_order(ALI, false, fair[ALI], o.qty / 10 * 3);
+                    add_order(TCT, false, fair[TCT], o.qty / 10 * 2);
                 }
             } else {
                 // TODO
@@ -216,7 +216,10 @@ void state::handle(std::string &s)
         //if (o.sym == BOND) add_order(BOND, o.is_buy, o.price, qty);
 
         _pos[(int)o.sym] += (o.is_buy ? +qty : -qty);
-        if (o.sym == BAT && std::abs(_pos[BAT]) >= 80) {
+        static int since_last_convert = 0;
+        since_last_convert++;
+        if (since_last_convert >= 20 && o.sym == BAT && std::abs(_pos[BAT]) >= 80) {
+            since_last_convert = 0;
             if (_pos[BAT] > 0) {
                 add_convert(BAT, false, _pos[BAT] / 10 * 10);
             } else {
