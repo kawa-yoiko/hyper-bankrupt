@@ -7,6 +7,12 @@ beijing-2019, pekingduck
 SSH: ubuntu@13.236.161.13  
 freed-filly-lyric
 
+#### FAQ
+
+Order IDs cannot be reused, even if they are already OUT
+
+After each matchup the TCP connection will close.
+
 #### Plaintext sample
 
 ```plain
