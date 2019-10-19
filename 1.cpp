@@ -117,7 +117,8 @@ public:
     const size_t len = 10000;
     char buf[len];
     if(!fgets(buf, len, this->in)){
-      throw std::runtime_error("reading line from socket");
+      //throw std::runtime_error("reading line from socket");
+      return "";
     }
 
     int read_length = strlen(buf);
@@ -160,8 +161,18 @@ void run()
       exponential explosion in pending messages. Please, don't do that!
     */
     conn.send_to_exchange(join(" ", data));
-    std::string line = conn.read_from_exchange();
-    std::cout << "The exchange replied: " << line << std::endl;
+
+    state st;
+    st.send_callback = [&conn] (std::string &s) {
+        printf(">> %s\n", s.c_str());
+        conn.send_to_exchange(s);
+    };
+    while (1) {
+        std::string line = conn.read_from_exchange();
+        printf("<< %s\n", line.c_str());
+        if (line.empty()) break;
+        st.parse(line);
+    }
 }
 
 void run_local()
@@ -169,8 +180,12 @@ void run_local()
     printf("HELLO DRAX\n");
     std::string s;
     state st;
+    st.send_callback = [] (std::string &s) {
+        printf(">> %s\n", s.c_str());
+    };
     while (1) {
         std::getline(std::cin, s);
+        printf("<< %s\n", s.c_str());
         if (s.empty()) break;
         st.parse(s);
     }
@@ -178,7 +193,10 @@ void run_local()
 
 int main(int argc, char *argv[])
 {
-    freopen("1.txt", "r", stdin);
+#ifdef LOCAL
     run_local();
+#else
+    run();
+#endif
     return 0;
 }

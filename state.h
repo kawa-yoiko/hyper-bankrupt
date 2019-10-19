@@ -1,6 +1,7 @@
 #ifndef _STATE_H_
 #define _STATE_H_
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -36,6 +37,8 @@ public:
         default: return INVALID;
         }
     }
+
+    std::function<void (std::string &)> send_callback;
 
 protected:
     bool _initialized;
