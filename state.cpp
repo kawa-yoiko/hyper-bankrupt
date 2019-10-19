@@ -137,7 +137,7 @@ void state::handle(std::string &s)
     } else if (v[0] == "BOOK") {
         const char *cs = s.c_str() + 5;
         enum symbol sym = parse_symbol(cs);
-        if (sym != BOND) return;
+        //if (sym != BOND && sym != BAT && sym != CHE) return;
         printf("BOOK received (%s)\n", symbol_name[sym]);
         puts(cs);
         int i = 3;  // BOOK <SYM> BUY
@@ -156,10 +156,8 @@ void state::handle(std::string &s)
         updTradeNaive(CHE);
         updTradeNaive(BAT);
 
-        if (sym == BOND) {
-            printf("BOOK received (%s)\n", symbol_name[sym]);
-            puts(cs);
-        }
+        printf("BOOK received (%s)\n", symbol_name[sym]);
+        puts(cs);
 
     } else if (v[0] == "TRADE") {
         //printf("TRADE\n");
