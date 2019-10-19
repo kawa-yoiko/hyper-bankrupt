@@ -123,10 +123,8 @@ void state::handle(std::string &s)
     } else if (v[0] == "OPEN") {
         puts("OPEN received");
         _open = true;
-        for (int i = 1; i <= 4; i++) {
-            add_order(BOND, true, 1000 - i, (i >= 3 ? 10 : 30));
-            add_order(BOND, false, 1000 + i, (i >= 3 ? 10 : 30));
-        }
+        add_order(BOND, true, 999, 100);
+        add_order(BOND, false, 1001, 100);
     } else if (v[0] == "CLOSE") {
         puts("CLOSE received");
         _open = false;
@@ -156,8 +154,8 @@ void state::handle(std::string &s)
         updTradeNaive(CHE);
         updTradeNaive(BAT);
 
-        printf("BOOK received (%s)\n", symbol_name[sym]);
-        puts(cs);
+        //printf("BOOK received (%s)\n", symbol_name[sym]);
+        //puts(cs);
 
     } else if (v[0] == "TRADE") {
         //printf("TRADE\n");
