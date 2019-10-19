@@ -56,6 +56,26 @@ static inline std::pair<int, int> parse_pair(state::const_cstr s) {
 }
 
 
+void state::wdnmd(symbol sym)
+{
+    const int BUY = 1, SELL = 0;
+    static int prevbuy[COUNT];
+    static int prevsell[COUNT];
+    static int prevfair[COUNT];
+    std::fill(prevbuy, prevbuy+COUNT, -1);
+    std::fill(prevbuy, prevbuy+COUNT, -1);
+    std::fill(prevbuy, prevbuy+COUNT, -1);
+
+    if (int(round(fair[sym])) != prevfair[sym])
+    {
+        if (prevbuy[sym] != -1) cancel_order(prevbuy[sym]);
+        if (prevsell[sym] != -1) cancel_order(prevsell[sym]);
+        prevfair[sym] = int(round(fair[sym]));
+        prevbuy[sym] = add_order(sym, BUY, prevfair[sym]-2, limit[sym]-_pos[sym]);
+        prevsell[sym] = add_order(sym, SELL, prevfair[sym]+2, limit[sym]+_pos[sym]);
+    }
+}
+
 
 int state::add_order(symbol sym, bool is_buy, int price, int qty)
 {
@@ -149,7 +169,7 @@ void state::handle(std::string &s)
         }
         _book[(int)sym][0] = book_entry[0];
         _book[(int)sym][1] = book_entry[1];
-        
+
         updFairPrice();
         wdnmd(CHE);
         wdnmd(BAT);

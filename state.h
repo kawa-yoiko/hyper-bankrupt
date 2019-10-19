@@ -36,6 +36,7 @@ public:
     double fair[233];
     void updFairPrice();
     void updTradeNaive(symbol sym);
+    void wdnmd(symbol sym);
 
 protected:
     bool _initialized;
