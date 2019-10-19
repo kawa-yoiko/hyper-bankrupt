@@ -9,8 +9,6 @@ char name[7][5]={"BOND","CAR","CHE","BDU","ALI","TCT","BAT"};
 vector<double> V[7];
 void init(){
 	freopen("sample.in","r",stdin);
-  for(int i=0;i<7;i++)
-  V[i].clear();
 	while(1){
 		memset(str,0,sizeof(str));
 		gets(str);
@@ -66,14 +64,14 @@ void dft(int id){
 	}
 	for(int i=0;i<N;i++){
 		//printf("%lf %lf\n",X[i],Y[i]);
-	A[i]=sqrt(X[i]*X[i]+Y[i]*Y[i]);
+	A[i]=sqrt(X[i]*X[i]+Y[i]*Y[i])/N;
 	if(fabs(X[i])<1e-8)phi[i]=0;
 	else phi[i]=atan(Y[i]/X[i]);
 	}
 }
 void predict(int id){
-	double maxv=-1e9;
-	int maxt=0;
+	double maxv=-1e9,minv=1e9;
+	int maxt=0,mint=0;
 	int N=V[id].size();
 	for(int t=N;t<N+100;t++){
 		double val=delta[id];
@@ -83,9 +81,13 @@ void predict(int id){
 			maxt=t;
 			maxv=val;
 		}
+		if(val<minv){
+			mint=t;
+			minv=val;
+		}
 	}
-	maxv+=A[0]/N;
-	printf("%s %d %lf\n",name[id],maxt,maxv);
+	maxv+=A[0];
+	printf("%s %d %lf %d %lf\n",name[id],maxt-N,maxv,mint-N,minv);
 }
 int main(){
 	init();
