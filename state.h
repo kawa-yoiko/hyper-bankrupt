@@ -7,7 +7,15 @@
 
 class state {
 public:
-    state() : _initialized(false), _open(false), _id(0) { }
+    state() : _initialized(false), _open(false), _id(0) {
+        limit[BOND] = 100;
+        limit[CAR] = 10;
+        limit[CHE] = 10;
+        limit[BDU] = 100;
+        limit[ALI] = 100;
+        limit[TCT] = 100;
+        limit[BAT] = 100;
+    }
 
     void parse(std::string &s);
 
@@ -15,6 +23,7 @@ public:
         BOND, CAR, CHE, BDU, ALI, TCT, BAT, INVALID, COUNT
     };
     static const char *symbol_name[COUNT];
+    int limit[COUNT];
 
     typedef const char *const_cstr;
     static inline enum symbol parse_symbol(const_cstr &s) {
@@ -59,6 +68,19 @@ public:
         sprintf(s, "CANCEL %d", id);
         send_callback(s);
         remove_order(id);
+    }
+
+    double fair[233];
+
+    void updFairPrice()
+    {
+        fair[BOND] = 1000;
+        std::vector<symbol> stock = {CAR, BDU, ALI, TCT};
+        for (auto s: stock)
+            if (!_book[s][0].empty() && !_book[s][0].empty())
+                fair[s] = 0.5 * (_book[s][0][0].first + _book[s][1][0].first);
+        fair[CHE] = fair[CAR];
+        fair[BAT] = 0.3*fair[BOND] + 0.2*fair[BDU] + 0.3*fair[ALI] + 0.2*fair[TCT];
     }
 
 protected:
