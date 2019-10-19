@@ -53,6 +53,14 @@ public:
         return id;
     }
 
+    void cancel_order(int id)
+    {
+        char s[16];
+        sprintf(s, "CANCEL %d", id);
+        send_callback(s);
+        remove_order(id);
+    }
+
 protected:
     bool _initialized;
     bool _open;
