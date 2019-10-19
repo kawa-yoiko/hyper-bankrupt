@@ -123,8 +123,8 @@ void state::handle(std::string &s)
     } else if (v[0] == "OPEN") {
         puts("OPEN received");
         _open = true;
-        add_order(BOND, true, 999, 100);
-        add_order(BOND, false, 1001, 100);
+        add_order(BOND, true, 999, 70);
+        add_order(BOND, false, 1001, 70);
     } else if (v[0] == "CLOSE") {
         puts("CLOSE received");
         _open = false;
