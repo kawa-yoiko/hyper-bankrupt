@@ -7,10 +7,10 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <cmath>
 
 class state {
 public:
-    int limit[COUNT];
     state() : _initialized(false), _open(false), _id(0) {
         limit[BOND] = 100;
         limit[CAR] = 10;
@@ -27,6 +27,7 @@ public:
         BOND = 0, CAR, CHE, BDU, ALI, TCT, BAT, INVALID, COUNT
     };
     static const char *symbol_name[COUNT];
+    int limit[COUNT];
 
     typedef const char *const_cstr;
     static inline enum symbol parse_symbol(const_cstr &s) {
@@ -119,8 +120,8 @@ public:
 
         if (int(round(fair[sym])) != prevfair[sym])
         {
-            if (prevbuy[sym] != -1) cancel_order(prevbuy);
-            if (prevsell[sym] != -1) cancel_order(prevsell);
+            if (prevbuy[sym] != -1) cancel_order(prevbuy[sym]);
+            if (prevsell[sym] != -1) cancel_order(prevsell[sym]);
             prevfair[sym] = int(round(fair[sym]));
             prevbuy[sym] = add_order(sym, BUY, prevfair[sym]-2, limit[sym]-_pos[sym]);
             prevsell[sym] = add_order(sym, SELL, prevfair[sym]+2, limit[sym]+_pos[sym]);
