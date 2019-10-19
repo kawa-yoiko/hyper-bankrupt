@@ -174,7 +174,7 @@ void state::handle(std::string &s)
         printf("FILL price = %d qty = %d\n", price, qty);
         const char *cs = v[2].c_str();
         const auto &o = _orders[id];
-        add_order(BOND, o.is_buy, o.price, qty);
+        if (o.sym == BOND) add_order(BOND, o.is_buy, o.price, qty);
     } else if (v[0] == "OUT") {
         printf("OUT %s\n", v[1].c_str());
     }
