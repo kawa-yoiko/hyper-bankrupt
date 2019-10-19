@@ -31,6 +31,7 @@ public:
     std::function<void (const char *)> send_callback;
 
     int add_order(symbol sym, bool is_buy, int price, int qty);
+    int add_convert(symbol sym, bool is_buy, int qty);
     void cancel_order(int id);
 
     double fair[233];
@@ -46,6 +47,7 @@ protected:
     struct order {
         int id;
         symbol sym;
+        bool is_convert;
         bool is_buy;
         int price;
         int qty;

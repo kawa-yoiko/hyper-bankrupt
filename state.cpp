@@ -65,7 +65,18 @@ int state::add_order(symbol sym, bool is_buy, int price, int qty)
     sprintf(s, "ADD %d %s %s %d %d", id, symbol_name[sym],
         is_buy ? "BUY" : "SELL", price, qty);
     send_callback(s);
-    _orders.push_back(order {id, sym, is_buy, price, qty});
+    _orders.push_back(order {id, sym, false, is_buy, price, qty});
+    return id;
+}
+
+int state::add_convert(symbol sym, bool is_buy, int qty)
+{
+    char s[1024];
+    int id = _id++;
+    sprintf(s, "CONVERT %d %s %s %d", id, symbol_name[sym],
+        is_buy ? "BUY" : "SELL", qty);
+    send_callback(s);
+    _orders.push_back(order {id, sym, true, is_buy, 0, qty});
     return id;
 }
 
@@ -129,8 +140,8 @@ void state::handle(std::string &s)
     } else if (v[0] == "OPEN") {
         puts("OPEN received");
         _open = true;
-        add_order(BOND, true, 999, std::min(100, 100 - _pos[BOND]));
-        add_order(BOND, false, 1001, std::min(100, 100 + _pos[BOND]));
+        //add_order(BOND, true, 999, std::min(100, 100 - _pos[BOND]));
+        //add_order(BOND, false, 1001, std::min(100, 100 + _pos[BOND]));
     } else if (v[0] == "CLOSE") {
         puts("CLOSE received");
         _open = false;
@@ -166,7 +177,20 @@ void state::handle(std::string &s)
     } else if (v[0] == "TRADE") {
         //printf("TRADE\n");
     } else if (v[0] == "ACK") {
-        printf("ACK %s\n", v[1].c_str());
+        int id = std::stoi(v[1]);
+        const auto &o = _orders[id];
+        if (_orders[id].is_convert) {
+            int mul = (o.is_buy ? +1 : -1);
+            _pos[o.sym] += o.qty * mul;
+            if (o.sym == BAT) {
+                _pos[BOND] -= o.qty / 10 * 3 * mul;
+                _pos[BDU] -= o.qty / 10 * 2 * mul;
+                _pos[ALI] -= o.qty / 10 * 3 * mul;
+                _pos[TCT] -= o.qty / 10 * 2 * mul;
+            } else {
+                // TODO
+            }
+        }
     } else if (v[0] == "REJECT") {
         puts("------");
         printf("REJECT %s %s\n", v[1].c_str(), v[2].c_str());
@@ -178,7 +202,16 @@ void state::handle(std::string &s)
         printf("FILL price = %d qty = %d\n", price, qty);
         const char *cs = v[2].c_str();
         const auto &o = _orders[id];
-        if (o.sym == BOND) add_order(BOND, o.is_buy, o.price, qty);
+        //if (o.sym == BOND) add_order(BOND, o.is_buy, o.price, qty);
+
+        _pos[(int)o.sym] += (o.is_buy ? +qty : -qty);
+        if (o.sym == BAT && std::abs(_pos[BAT]) >= 80) {
+            if (_pos[BAT] > 0) {
+                add_convert(BAT, false, _pos[BAT] / 10 * 10);
+            } else {
+                add_convert(BAT, true, -_pos[BAT] / 10 * 10);
+            }
+        }
     } else if (v[0] == "OUT") {
         printf("OUT %s\n", v[1].c_str());
     }
