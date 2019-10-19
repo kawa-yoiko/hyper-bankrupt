@@ -149,8 +149,10 @@ void state::adjust_orders(std::pair<int *, int *> desired)
         } else if (desired.first[i] < s.size()) {
             // Less orders
             int count = -(desired.first[i] - s.size());
+            //printf("Cancel %d order(s) (%d/%d)\n", count, desired.first[i], (int)s.size());
             for (int j = 0; j < count; j++) {
                 auto it = s.end(); --it;
+                //printf("Cancelling #%d for price %d\n", *it, fair_price + i);
                 cancel_order(*it);
             }
         }

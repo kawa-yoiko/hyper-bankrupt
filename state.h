@@ -82,7 +82,7 @@ public:
     {
         const auto &o = _orders[id];
         int sym = (int)o.sym;
-        _orders_for[sym][o.is_buy].erase(id);
+        _orders_for[sym][o.is_buy][o.price].erase(id);
     }
 
     double fair[233];
