@@ -1,4 +1,5 @@
 #include "state.h"
+#include <cmath>
 
 using symbol = state::symbol;
 
@@ -85,6 +86,28 @@ void state::updFairPrice()
     fair[CHE] = fair[CAR];
     fair[BAT] = 0.3*fair[BOND] + 0.2*fair[BDU] + 0.3*fair[ALI] + 0.2*fair[TCT];
 }
+
+
+void state::updTradeNaive(symbol sym)
+{
+    const int BUY = 1, SELL = 0;
+    static int prevbuy[COUNT];
+    static int prevsell[COUNT];
+    static int prevfair[COUNT];
+    std::fill(prevbuy, prevbuy+COUNT, -1);
+    std::fill(prevbuy, prevbuy+COUNT, -1);
+    std::fill(prevbuy, prevbuy+COUNT, -1);
+
+    if (int(round(fair[sym])) != prevfair[sym])
+    {
+        if (prevbuy[sym] != -1) cancel_order(prevbuy[sym]);
+        if (prevsell[sym] != -1) cancel_order(prevsell[sym]);
+        prevfair[sym] = int(round(fair[sym]));
+        prevbuy[sym] = add_order(sym, BUY, prevfair[sym]-2, 5);
+        prevsell[sym] = add_order(sym, SELL, prevfair[sym]+2, 5);
+    }
+}
+
 
 
 

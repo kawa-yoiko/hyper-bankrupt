@@ -23,6 +23,7 @@ public:
     };
     static const char *symbol_name[COUNT];
     int limit[COUNT];
+    int _pos[COUNT] = {0};
 
     typedef const char *const_cstr;
     static inline symbol parse_symbol(const_cstr &s);
@@ -34,6 +35,7 @@ public:
 
     double fair[233];
     void updFairPrice();
+    void updTradeNaive(symbol sym);
 
 protected:
     bool _initialized;
