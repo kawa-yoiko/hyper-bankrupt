@@ -187,6 +187,17 @@ void state::handle(std::string &s)
                 _pos[BDU] -= o.qty / 10 * 2 * mul;
                 _pos[ALI] -= o.qty / 10 * 3 * mul;
                 _pos[TCT] -= o.qty / 10 * 2 * mul;
+                if (o.is_buy) {
+                    add_order(BOND, true, 999, o.qty / 10 * 3 * mul);
+                    add_order(BDU, true, fair[BDU] - 2, o.qty / 10 * 2);
+                    add_order(ALI, true, fair[ALI] - 2, o.qty / 10 * 3);
+                    add_order(TCT, true, fair[TCT] - 2, o.qty / 10 * 2);
+                } else {
+                    add_order(BOND, false, 1001, o.qty / 10 * 3 * mul);
+                    add_order(BDU, false, fair[BDU] + 2, o.qty / 10 * 2);
+                    add_order(ALI, false, fair[ALI] + 2, o.qty / 10 * 3);
+                    add_order(TCT, false, fair[TCT] + 2, o.qty / 10 * 2);
+                }
             } else {
                 // TODO
             }
