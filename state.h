@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
 class state {
@@ -12,7 +13,7 @@ public:
     void parse(std::string &s);
 
     enum symbol {
-        BOND, CAR, CHE, BDU, ALI, TCT, BAT, INVALID, COUNT
+        BOND = 0, CAR, CHE, BDU, ALI, TCT, BAT, INVALID, COUNT
     };
     static const char *symbol_name[COUNT];
 
@@ -38,6 +39,19 @@ public:
             s += 3; return TCT;
         default: return INVALID;
         }
+    }
+
+    static inline int parse_int(const_cstr &s) {
+        int ret = 0;
+        while (*s >= '0' && *s <= '9') ret = ret * 10 + *(s++) - '0';
+        return ret;
+    }
+
+    static inline std::pair<int, int> parse_pair(const_cstr s) {
+        int price = parse_int(s);
+        s++;    // Skip ':'
+        int qty = parse_int(s);
+        return {price, qty};
     }
 
     std::function<void (const char *)> send_callback;
@@ -67,6 +81,10 @@ protected:
         int qty;
     };
     std::vector<order> _orders;
+
+    int _pos[COUNT];
+    // [0] = sell, [1] = buy
+    std::vector<std::pair<int, int>> _book[COUNT][2];
 };
 
 #endif
