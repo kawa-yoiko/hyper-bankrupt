@@ -56,25 +56,6 @@ static inline std::pair<int, int> parse_pair(state::const_cstr s) {
 }
 
 
-void state::wdnmd(symbol sym)
-{
-    const int BUY = 1, SELL = 0;
-    static int prevbuy[COUNT];
-    static int prevsell[COUNT];
-    static int prevfair[COUNT];
-    std::fill(prevbuy, prevbuy+COUNT, -1);
-    std::fill(prevbuy, prevbuy+COUNT, -1);
-    std::fill(prevbuy, prevbuy+COUNT, -1);
-
-    if (int(round(fair[sym])) != prevfair[sym])
-    {
-        if (prevbuy[sym] != -1) cancel_order(prevbuy[sym]);
-        if (prevsell[sym] != -1) cancel_order(prevsell[sym]);
-        prevfair[sym] = int(round(fair[sym]));
-        prevbuy[sym] = add_order(sym, BUY, prevfair[sym]-2, limit[sym]-_pos[sym]);
-        prevsell[sym] = add_order(sym, SELL, prevfair[sym]+2, limit[sym]+_pos[sym]);
-    }
-}
 
 
 int state::add_order(symbol sym, bool is_buy, int price, int qty)
@@ -105,20 +86,20 @@ void state::updFairPrice()
             fair[s] = 0.5 * (_book[s][0][0].first + _book[s][1][0].first);
     fair[CHE] = fair[CAR];
     fair[BAT] = 0.3*fair[BOND] + 0.2*fair[BDU] + 0.3*fair[ALI] + 0.2*fair[TCT];
+    if (fair[BDU]==-1) fair[BAT] = -1;
+    if (fair[ALI]==-1) fair[ALI] = -1;
+    if (fair[TCT]==-1) fair[TCT] = -1;
 }
 
 
 void state::updTradeNaive(symbol sym)
 {
     const int BUY = 1, SELL = 0;
-    static int prevbuy[COUNT];
-    static int prevsell[COUNT];
-    static int prevfair[COUNT];
-    std::fill(prevbuy, prevbuy+COUNT, -1);
-    std::fill(prevbuy, prevbuy+COUNT, -1);
-    std::fill(prevbuy, prevbuy+COUNT, -1);
+    static int prevbuy[COUNT] = {-1,-1,-1,-1,-1,-1,-1,-1};
+    static int prevsell[COUNT] = {-1,-1,-1,-1,-1,-1,-1,-1};
+    static int prevfair[COUNT] = {-1,-1,-1,-1,-1,-1,-1,-1};
 
-    if (int(round(fair[sym])) != prevfair[sym])
+    if (int(round(fair[sym])) != prevfair[sym] && int(round(fair[sym])) != -1)
     {
         if (prevbuy[sym] != -1) cancel_order(prevbuy[sym]);
         if (prevsell[sym] != -1) cancel_order(prevsell[sym]);
@@ -171,8 +152,8 @@ void state::handle(std::string &s)
         _book[(int)sym][1] = book_entry[1];
 
         updFairPrice();
-        wdnmd(CHE);
-        wdnmd(BAT);
+        updTradeNaive(CHE);
+        updTradeNaive(BAT);
 
         if (sym == BOND) {
             printf("BOOK received (%s)\n", symbol_name[sym]);
