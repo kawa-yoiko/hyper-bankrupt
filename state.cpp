@@ -105,8 +105,8 @@ void state::updTradeNaive(symbol sym)
         if (prevbuy[sym] != -1) cancel_order(prevbuy[sym]);
         if (prevsell[sym] != -1) cancel_order(prevsell[sym]);
         prevfair[sym] = int(round(fair[sym]));
-        prevbuy[sym] = add_order(sym, BUY, prevfair[sym]-2, 5);
-        prevsell[sym] = add_order(sym, SELL, prevfair[sym]+2, 5);
+        prevbuy[sym] = add_order(sym, BUY, prevfair[sym]-4, 5);
+        prevsell[sym] = add_order(sym, SELL, prevfair[sym]+4, 5);
     }
 }
 
