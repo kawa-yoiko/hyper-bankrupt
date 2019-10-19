@@ -1,4 +1,5 @@
 #include "state.h"
+#include "trade_strategy.h"
 
 #include <iterator>
 #include <sstream>
@@ -28,13 +29,14 @@ void state::parse(std::string &s)
             p++;    // Skip ':'
             sscanf(p, "%d", &_pos[(int)sym]);
         }
-    } else if (v[0] == "OPEN") {
-        puts("OPEN received");
-        _open = true;
         for (int i = 1; i <= 4; i++) {
             add_order(BOND, true, 1000 - i, (i >= 3 ? 10 : 30));
             add_order(BOND, false, 1000 + i, (i >= 3 ? 10 : 30));
         }
+        _filled_since_last_recal = 0;
+    } else if (v[0] == "OPEN") {
+        puts("OPEN received");
+        _open = true;
     } else if (v[0] == "CLOSE") {
         puts("CLOSE received");
         _open = false;
@@ -76,14 +78,50 @@ void state::parse(std::string &s)
         printf("FILL price = %d qty = %d\n", price, qty);
         const char *cs = v[2].c_str();
         const auto &o = _orders[id];
-        if (o.is_buy) {
-            _pos[(int)o.sym] += qty;
-        } else {
-            _pos[(int)o.sym] -= qty;
-        }
+        int sym = (int)o.sym;
 
-        add_order(BOND, o.is_buy, o.price, qty);
+        _fills[sym][o.is_buy][price] += qty;
+
+        if ((_filled_since_last_recal += qty) >= 50) {
+            _filled_since_last_recal = 0;
+            auto dist = cal_dist(BOND);
+
+            trade_strategy strategy(1000, _pos[BOND], 100, dist.second, dist.first);
+            auto result = strategy.trade_price();
+            for (int i = 0; i < 15; i++) printf("-- SELL %d %d\n", i, result.first[i]);
+            for (int i = 0; i < 15; i++) printf("-- BUY %d %d\n", i, result.second[i]);
+
+            delete[] dist.first;
+            delete[] dist.second;
+            delete[] result.first;
+            delete[] result.second;
+
+            _fills[sym][0].clear();
+            _fills[sym][1].clear();
+        }
     } else if (v[0] == "OUT") {
         printf("OUT %s\n", v[1].c_str());
     }
+}
+
+std::pair<int *, int *> state::cal_dist(symbol sym)
+{
+    double fair_price = 1000;
+    int *buy = new int[15]();
+    int *sell = new int[15]();
+    // Sell, deal price >= fair price
+    for (auto p : _fills[sym][0]) {
+        int idx = (int)(p.first - fair_price + 0.5);
+        idx = std::max(0, std::min(14, idx));
+        sell[idx] += p.second;
+        printf("!! %d %d\n", p.first, idx);
+    }
+    // Buy, deal price <= fair price
+    for (auto p : _fills[sym][1]) {
+        int idx = (int)(-p.first + fair_price + 0.5);
+        idx = std::max(0, std::min(14, idx));
+        buy[idx] += p.second;
+        printf("!! %d %d\n", p.first, idx);
+    }
+    return {sell, buy};
 }

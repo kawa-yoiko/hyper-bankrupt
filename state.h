@@ -2,6 +2,7 @@
 #define _STATE_H_
 
 #include <functional>
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -98,6 +99,13 @@ protected:
     int _pos[COUNT];
     // [0] = sell, [1] = buy
     std::vector<std::pair<int, int>> _book[COUNT][2];
+
+    int _filled_since_last_recal;
+    // [sym]
+    // [0] = sell, [1] = buy
+    std::map<int, int> _fills[COUNT][2];
+    // first = sell, second = buy
+    std::pair<int *, int *> cal_dist(symbol sym);
 };
 
 #endif
