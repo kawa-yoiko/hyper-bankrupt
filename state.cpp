@@ -60,6 +60,8 @@ void state::parse(std::string &s)
         _book[(int)sym][0] = book_entry[0];
         _book[(int)sym][1] = book_entry[1];
         updFairPrice();
+        wdnmd(CHE);
+        wdnmd(BAT);
         //for (auto p : book_entry[0]) printf("%d %d\n", p.first, p.second);
     } else if (v[0] == "TRADE") {
         //printf("TRADE\n");
