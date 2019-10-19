@@ -7,13 +7,15 @@
 
 class state {
 public:
-    state() : _initialized(false), _open(false) { }
+    state() : _initialized(false), _open(false), _id(0) { }
 
     void parse(std::string &s);
 
     enum symbol {
-        BOND, CAR, CHE, BDU, ALI, TCT, BAT, INVALID
+        BOND, CAR, CHE, BDU, ALI, TCT, BAT, INVALID, COUNT
     };
+    static const char *symbol_name[COUNT];
+
     typedef const char *const_cstr;
     static inline enum symbol parse_symbol(const_cstr &s) {
         switch (s[0]) {
@@ -38,11 +40,33 @@ public:
         }
     }
 
-    std::function<void (std::string &)> send_callback;
+    std::function<void (const char *)> send_callback;
+
+    int add_order(symbol sym, bool is_buy, int price, int qty)
+    {
+        char s[1024];
+        int id = _id++;
+        sprintf(s, "ADD %d %s %s %d %d", id, symbol_name[sym],
+            is_buy ? "BUY" : "SELL", price, qty);
+        send_callback(s);
+        _orders.push_back(order {id, sym, is_buy, price, qty});
+        return id;
+    }
 
 protected:
     bool _initialized;
     bool _open;
+
+    int _id;
+
+    struct order {
+        int id;
+        symbol sym;
+        bool is_buy;
+        int price;
+        int qty;
+    };
+    std::vector<order> _orders;
 };
 
 #endif

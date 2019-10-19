@@ -36,7 +36,7 @@ private:
     1 = slower
     2 = empty
   */
-  static int const test_exchange_index = 2;
+  static int const test_exchange_index = 0;
 public:
   std::string team_name;
   std::string exchange_hostname;
@@ -99,11 +99,11 @@ public:
   }
 
   /** Send a string to the server */
-  void send_to_exchange(std::string input) {
-    std::string line(input);
+  void send_to_exchange(const char *input) {
+    //std::string line(input);
     /* All messages must always be uppercase */
-    std::transform(line.begin(), line.end(), line.begin(), ::toupper);
-    int res = fprintf(this->out, "%s\n", line.c_str());
+    //std::transform(line.begin(), line.end(), line.begin(), ::toupper);
+    int res = fprintf(this->out, "%s\n", input);
     if (res < 0) {
       throw std::runtime_error("error sending to exchange");
     }
@@ -147,29 +147,31 @@ std::string join(std::string sep, std::vector<std::string> strs) {
 void run()
 {
     // Be very careful with this boolean! It switches between test and prod
+#ifdef PROD
+    bool test_mode = false;
+#else
     bool test_mode = true;
+#endif
     Configuration config(test_mode);
     Connection conn(config);
 
     std::vector<std::string> data;
-    data.push_back(std::string("HELLO"));
-    data.push_back(config.team_name);
     /*
       A common mistake people make is to conn.send_to_exchange() > 1
       time for every conn.read_from_exchange() response.
       Since many write messages generate marketdata, this will cause an
       exponential explosion in pending messages. Please, don't do that!
     */
-    conn.send_to_exchange(join(" ", data));
+    conn.send_to_exchange("HELLO DRAX");
 
     state st;
-    st.send_callback = [&conn] (std::string &s) {
-        printf(">> %s\n", s.c_str());
+    st.send_callback = [&conn] (const char *s) {
+        printf(">> %s\n", s);
         conn.send_to_exchange(s);
     };
     while (1) {
         std::string line = conn.read_from_exchange();
-        printf("<< %s\n", line.c_str());
+        //printf("<< %s\n", line.c_str());
         if (line.empty()) break;
         st.parse(line);
     }
@@ -180,12 +182,12 @@ void run_local()
     printf("HELLO DRAX\n");
     std::string s;
     state st;
-    st.send_callback = [] (std::string &s) {
-        printf(">> %s\n", s.c_str());
+    st.send_callback = [] (const char *s) {
+        printf(">> %s\n", s);
     };
     while (1) {
         std::getline(std::cin, s);
-        printf("<< %s\n", s.c_str());
+        //printf("<< %s\n", s.c_str());
         if (s.empty()) break;
         st.parse(s);
     }
