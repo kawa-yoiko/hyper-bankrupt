@@ -8,8 +8,6 @@ trade_strategy::trade_strategy(double fair_price, int possession, int limit, int
 	_buy_distribution=buy_distribution;
 	_first_trade=(_buy_distribution==NULL);
 	_sell_distribution=sell_distribution;
-    for (int i = 0; i < 15; i++) printf("%d%c", buy_distribution[i], i == 14 ? '\n' : ' ');
-    for (int i = 0; i < 15; i++) printf("%d%c", sell_distribution[i], i == 14 ? '\n' : ' ');
 }
 trade_strategy::~trade_strategy(){
 	//delete _buy_distribution;

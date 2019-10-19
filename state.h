@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -65,7 +66,23 @@ public:
             is_buy ? "BUY" : "SELL", price, qty);
         send_callback(s);
         _orders.push_back(order {id, sym, is_buy, price, qty});
+        _orders_for[sym][is_buy][price].insert(id);
         return id;
+    }
+
+    inline void cancel_order(int id)
+    {
+        char s[16];
+        sprintf(s, "CANCEL %d", id);
+        send_callback(s);
+        remove_order(id);
+    }
+
+    inline void remove_order(int id)
+    {
+        const auto &o = _orders[id];
+        int sym = (int)o.sym;
+        _orders_for[sym][o.is_buy].erase(id);
     }
 
     double fair[233];
@@ -96,6 +113,9 @@ protected:
     };
     std::vector<order> _orders;
 
+    // _orders_for[symbol][sell/buy][price]
+    std::map<int, std::set<int>> _orders_for[COUNT][2];
+
     int _pos[COUNT];
     // [0] = sell, [1] = buy
     std::vector<std::pair<int, int>> _book[COUNT][2];
@@ -106,6 +126,9 @@ protected:
     std::map<int, int> _fills[COUNT][2];
     // first = sell, second = buy
     std::pair<int *, int *> cal_dist(symbol sym);
+
+    void adjust_orders(std::pair<int *, int *> desired);
+    void adjust_orders(symbol sym, std::map<int, int> to_sell, std::map<int, int> to_buy);
 };
 
 #endif
