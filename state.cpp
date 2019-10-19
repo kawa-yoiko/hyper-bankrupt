@@ -79,6 +79,7 @@ void state::cancel_order(int id)
 
 void state::updFairPrice()
 {
+    std::fill(fair, fair+COUNT, -1);
     fair[BOND] = 1000;
     std::vector<symbol> stock = {CAR, BDU, ALI, TCT};
     for (auto s: stock)
